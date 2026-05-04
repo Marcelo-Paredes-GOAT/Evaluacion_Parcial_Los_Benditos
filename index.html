@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAT — Sistema de Alerta Temprana · Universidad Continental</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --ink:#0f0e0c;
+  --paper:#faf8f4;
+  --surface:#ffffff;
+  --border:#e8e4dc;
+  --muted:#7a7570;
+  --hint:#b5b0a8;
+
+  --accent:#1a4fd6;
+  --accent-soft:#eaf0ff;
+  --accent2:#d63a1a;
+  --accent2-soft:#fff0ee;
+  --green:#1a7a4a;
+  --green-soft:#eafaf2;
+  --amber:#c47a0a;
+  --amber-soft:#fdf4e0;
+  --purple:#6b1ad6;
+  --purple-soft:#f5eeff;
+
+  --r:14px;
+  --r-sm:8px;
+}
+
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);font-size:16px;line-height:1.6;overflow-x:hidden}
+
+/* ─── HERO ─── */
+.hero{
+  min-height:100vh;
+  background:var(--ink);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  padding:60px 40px;
+  position:relative;
+  overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 50% 110%, #1a4fd620 0%, transparent 70%);
+  pointer-events:none;
+}
+.hero-grid{
+  position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);
+  background-size:60px 60px;
+  pointer-events:none;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.15);
+  padding:8px 18px;border-radius:100px;
+  font-size:12px;letter-spacing:0.08em;text-transform:uppercase;
+  color:rgba(255,255,255,0.6);margin-bottom:32px;
+  font-family:'Syne',sans-serif;
+  animation:fadeUp 0.8s ease both;
+}
+.hero-badge::before{content:'●';color:#1a4fd6;font-size:8px;animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.hero h1{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(42px,7vw,80px);
+  font-weight:800;
+  color:#fff;
+  line-height:1.05;
+  letter-spacing:-0.02em;
+  margin-bottom:16px;
+  animation:fadeUp 0.8s 0.1s ease both;
+}
+.hero h1 span{color:#1a4fd6}
+.hero-sub{
+  font-size:18px;color:rgba(255,255,255,0.5);
+  max-width:520px;margin:0 auto 48px;
+  animation:fadeUp 0.8s 0.2s ease both;
+}
+
+.hero-stats{
+  display:flex;flex-wrap:wrap;justify-content:center;
+  gap:2px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:var(--r);
+  overflow:hidden;
+  animation:fadeUp 0.8s 0.3s ease both;
+}
+.hero-stat{
+  padding:28px 40px;text-align:center;
+  border-right:1px solid rgba(255,255,255,0.08);
+  flex:1;min-width:140px;
+}
+.hero-stat:last-child{border-right:none}
+.hero-stat .num{
+  font-family:'Syne',sans-serif;
+  font-size:36px;font-weight:800;
+  color:#fff;display:block;line-height:1;margin-bottom:6px;
+}
+.hero-stat .lbl{font-size:12px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.06em}
+
+.hero-scroll{
+  position:absolute;bottom:32px;left:50%;transform:translateX(-50%);
+  color:rgba(255,255,255,0.25);font-size:12px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  letter-spacing:0.06em;text-transform:uppercase;
+  animation:fadeUp 1s 0.8s ease both;
+}
+.scroll-line{width:1px;height:40px;background:linear-gradient(rgba(255,255,255,0.2),transparent)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── RESUMEN EJECUTIVO ─── */
+.exec-summary{
+  background:var(--accent);
+  padding:80px 40px;
+}
+.exec-inner{max-width:960px;margin:0 auto}
+.exec-label{
+  font-family:'Syne',sans-serif;
+  font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
+  color:rgba(255,255,255,0.5);margin-bottom:20px;
+}
+.exec-summary h2{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(24px,4vw,42px);font-weight:700;
+  color:#fff;line-height:1.2;margin-bottom:32px;
+  max-width:700px;
+}
+.exec-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.exec-card{
+  background:rgba(255,255,255,0.1);
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:var(--r);
+  padding:24px;
+}
+.exec-card .icon{font-size:28px;margin-bottom:12px;display:block}
+.exec-card .title{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;color:#fff;margin-bottom:6px}
+.exec-card .desc{font-size:13px;color:rgba(255,255,255,0.6);line-height:1.5}
+
+/* ─── SECCIONES ─── */
+.section-wrap{max-width:960px;margin:0 auto;padding:80px 40px}
+
+.section-label{
+  display:flex;align-items:center;gap:12px;
+  font-family:'Syne',sans-serif;
+  font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:12px;font-weight:600;
+}
+.section-label::before{content:'';width:24px;height:2px;background:var(--accent)}
+.section-label .num{
+  background:var(--accent);color:#fff;
+  width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;flex-shrink:0;
+}
+
+.section-title{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(26px,4vw,38px);font-weight:700;
+  line-height:1.15;margin-bottom:12px;
+  letter-spacing:-0.01em;
+}
+.section-intro{font-size:17px;color:var(--muted);max-width:600px;margin-bottom:48px;line-height:1.6}
+
+.divider{height:1px;background:var(--border);margin:0}
+
+/* ─── PROBLEMA ─── */
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:40px}
+.problem-big{
+  background:var(--accent2-soft);
+  border:1px solid rgba(214,58,26,0.15);
+  border-radius:var(--r);
+  padding:36px;
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.big-num{font-family:'Syne',sans-serif;font-size:72px;font-weight:800;color:var(--accent2);line-height:1}
+.big-label{font-size:15px;color:var(--muted);margin-top:8px}
+.problem-desc{
+  background:var(--ink);color:#fff;
+  border-radius:var(--r);padding:36px;
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.problem-desc h3{font-family:'Syne',sans-serif;font-size:20px;font-weight:600;margin-bottom:12px}
+.problem-desc p{font-size:14px;color:rgba(255,255,255,0.6);line-height:1.6}
+
+.clases-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
+.clase-card{border-radius:var(--r-sm);padding:20px 24px;border:1px solid}
+.clase-card.riesgo{background:var(--accent2-soft);border-color:rgba(214,58,26,0.2)}
+.clase-card.seguro{background:var(--green-soft);border-color:rgba(26,122,74,0.2)}
+.clase-tag{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin-bottom:6px}
+.clase-card.riesgo .clase-tag{color:var(--accent2)}
+.clase-card.seguro .clase-tag{color:var(--green)}
+.clase-card p{font-size:14px;color:var(--muted)}
+
+/* ─── KPIS ─── */
+.kpi-section{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.kpi-grid-4{display:grid;grid-template-columns:repeat(4,1fr)}
+.kpi-item{
+  padding:40px 32px;
+  border-right:1px solid var(--border);
+  position:relative;
+}
+.kpi-item:last-child{border-right:none}
+.kpi-icon{font-size:24px;margin-bottom:16px;display:block}
+.kpi-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;color:var(--muted)}
+.kpi-val{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;line-height:1;margin-bottom:8px}
+.kpi-desc{font-size:13px;color:var(--muted);line-height:1.4}
+.kpi-badge{
+  display:inline-block;font-size:10px;font-weight:600;
+  text-transform:uppercase;letter-spacing:0.06em;
+  padding:3px 8px;border-radius:4px;margin-top:8px;
+}
+.badge-max{background:#eafaf2;color:var(--green)}
+.badge-crit{background:var(--accent2-soft);color:var(--accent2)}
+.badge-sec{background:var(--amber-soft);color:var(--amber)}
+.badge-low{background:var(--border);color:var(--muted)}
+
+/* ─── DATOS ─── */
+.data-layout{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;margin-bottom:40px}
+.data-chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:28px}
+.chart-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;margin-bottom:4px}
+.chart-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+.legend-row{display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.leg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+.outlier-full{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:28px;margin-bottom:32px}
+.outlier-note{font-size:12px;color:var(--hint);margin-top:10px;font-style:italic}
+
+/* ─── PREPARACION ─── */
+.prep-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px}
+.prep-step{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;position:relative}
+.step-num{
+  font-family:'Syne',sans-serif;font-size:11px;font-weight:700;
+  color:var(--hint);letter-spacing:0.06em;margin-bottom:16px;display:block;
+}
+.step-icon{font-size:28px;margin-bottom:12px;display:block}
+.step-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:600;margin-bottom:6px}
+.step-desc{font-size:13px;color:var(--muted);line-height:1.5}
+
+.feat-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.feat-card{border-radius:var(--r);padding:24px;border:1px solid}
+.feat-card.blue{background:var(--accent-soft);border-color:rgba(26,79,214,0.15)}
+.feat-card.purple{background:var(--purple-soft);border-color:rgba(107,26,214,0.15)}
+.feat-card .f-icon{font-size:24px;margin-bottom:10px;display:block}
+.feat-card .f-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;margin-bottom:6px}
+.feat-card.blue .f-title{color:var(--accent)}
+.feat-card.purple .f-title{color:var(--purple)}
+.feat-card .f-desc{font-size:13px;color:var(--muted);line-height:1.5}
+
+/* ─── MODELO ─── */
+.arch-visual{
+  background:var(--ink);border-radius:var(--r);
+  padding:40px;margin-bottom:32px;
+  display:flex;align-items:center;justify-content:center;gap:0;
+  overflow:hidden;position:relative;
+}
+.arch-visual::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 80% at 50% 50%,rgba(26,79,214,0.15) 0%,transparent 70%);
+}
+.arch-layers{display:flex;align-items:center;gap:0;position:relative;z-index:1;width:100%}
+.arch-layer{text-align:center;flex:1;position:relative}
+.arch-layer::after{
+  content:'→';position:absolute;right:-12px;top:50%;transform:translateY(-50%);
+  color:rgba(255,255,255,0.2);font-size:18px;z-index:2;
+}
+.arch-layer:last-child::after{display:none}
+.layer-box{
+  background:rgba(255,255,255,0.07);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:10px;padding:16px 8px;margin:0 8px;
+  position:relative;
+}
+.layer-box.highlight-layer{
+  background:rgba(26,79,214,0.3);
+  border-color:rgba(26,79,214,0.5);
+}
+.layer-name{font-family:'Syne',sans-serif;font-size:12px;font-weight:600;color:#fff;margin-bottom:4px}
+.layer-detail{font-size:10px;color:rgba(255,255,255,0.4)}
+.layer-tag{font-size:10px;color:rgba(255,255,255,0.5);margin-top:4px}
+.dots{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0}
+.dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2)}
+.dot.on{background:#1a4fd6}
+
+.config-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
+.config-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:18px 20px}
+.config-label{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--hint);margin-bottom:4px;font-weight:500}
+.config-val{font-family:'Syne',sans-serif;font-size:15px;font-weight:600}
+
+.code-wrap{
+  background:#111;border-radius:var(--r);overflow:hidden;
+  border:1px solid rgba(255,255,255,0.06);margin-bottom:8px;
+}
+.code-header{
+  background:rgba(255,255,255,0.04);
+  padding:12px 20px;
+  display:flex;align-items:center;gap:8px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.code-dot{width:10px;height:10px;border-radius:50%}
+.code-lang{font-size:11px;color:rgba(255,255,255,0.3);margin-left:auto;font-family:monospace}
+.code-body{padding:20px;font-family:'Courier New',monospace;font-size:13px;line-height:1.7;color:#d4d4d4;overflow-x:auto}
+.c-kw{color:#569cd6}.c-fn{color:#dcdcaa}.c-str{color:#ce9178}.c-num{color:#b5cea8}.c-cm{color:#6a9955}
+
+/* ─── EVALUACION ─── */
+.eval-section{background:var(--surface)}
+.metrics-layout{display:grid;grid-template-columns:2fr 1fr;gap:32px;align-items:start}
+.confusion-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:28px}
+.conf-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;margin-bottom:20px}
+.conf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.conf-cell{border-radius:var(--r-sm);padding:20px;text-align:center}
+.conf-cell .val{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1;display:block}
+.conf-cell .lbl{font-size:11px;margin-top:6px;font-weight:500}
+.conf-cell .sub{font-size:10px;color:var(--muted);margin-top:2px}
+.conf-vp{background:var(--green-soft);border:1px solid rgba(26,122,74,0.2)}
+.conf-vp .val,.conf-vp .lbl{color:var(--green)}
+.conf-fn{background:var(--accent2-soft);border:2px solid var(--accent2)}
+.conf-fn .val,.conf-fn .lbl{color:var(--accent2)}
+.conf-fp{background:var(--amber-soft);border:1px solid rgba(196,122,10,0.2)}
+.conf-fp .val,.conf-fp .lbl{color:var(--amber)}
+.conf-vn{background:var(--green-soft);border:1px solid rgba(26,122,74,0.2)}
+.conf-vn .val,.conf-vn .lbl{color:var(--green)}
+
+.crit-alert{
+  background:var(--accent2);color:#fff;
+  border-radius:var(--r);padding:24px 28px;
+  margin-top:16px;
+  display:flex;align-items:flex-start;gap:16px;
+}
+.crit-alert .icon{font-size:24px;flex-shrink:0;margin-top:2px}
+.crit-alert .title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px}
+.crit-alert .desc{font-size:13px;opacity:0.85;line-height:1.5}
+
+/* ─── DESPLIEGUE ─── */
+.deploy-flow{display:flex;align-items:center;gap:0;margin-bottom:40px;flex-wrap:wrap}
+.deploy-step{
+  flex:1;min-width:120px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-sm);
+  padding:20px 16px;
+  text-align:center;
+  position:relative;
+}
+.deploy-step::after{
+  content:'→';position:absolute;right:-16px;top:50%;transform:translateY(-50%);
+  color:var(--hint);font-size:16px;z-index:1;
+}
+.deploy-step:last-child::after{display:none}
+.d-icon{font-size:28px;display:block;margin-bottom:8px}
+.d-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:600;margin-bottom:4px}
+.d-desc{font-size:11px;color:var(--muted)}
+.deploy-gap{width:32px;flex-shrink:0}
+
+.threshold-box{
+  background:var(--ink);color:#fff;
+  border-radius:var(--r);padding:32px 36px;
+  display:flex;align-items:center;gap:36px;
+  margin-bottom:32px;
+}
+.threshold-num{font-family:'Syne',sans-serif;font-size:64px;font-weight:800;color:#1a4fd6;line-height:1;flex-shrink:0}
+.threshold-text .t{font-family:'Syne',sans-serif;font-size:18px;font-weight:600;margin-bottom:6px}
+.threshold-text .d{font-size:14px;color:rgba(255,255,255,0.5);line-height:1.5}
+
+.actions-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:40px}
+.action-card{border-radius:var(--r);padding:24px;border:1px solid}
+.action-card.a1{background:var(--accent-soft);border-color:rgba(26,79,214,0.15)}
+.action-card.a2{background:var(--amber-soft);border-color:rgba(196,122,10,0.15)}
+.action-card.a3{background:var(--green-soft);border-color:rgba(26,122,74,0.15)}
+.action-card .a-icon{font-size:28px;margin-bottom:12px;display:block}
+.action-card .a-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;margin-bottom:6px}
+.action-card.a1 .a-title{color:var(--accent)}
+.action-card.a2 .a-title{color:var(--amber)}
+.action-card.a3 .a-title{color:var(--green)}
+.action-card .a-desc{font-size:13px;color:var(--muted);line-height:1.5}
+
+/* ─── CONCLUSIONES ─── */
+.conclusion-hero{
+  background:var(--ink);
+  padding:80px 40px;
+}
+.conclusion-inner{max-width:960px;margin:0 auto}
+.conclusion-hero .section-label{color:rgba(255,255,255,0.4)}
+.conclusion-hero .section-label::before{background:rgba(255,255,255,0.3)}
+.conclusion-hero h2{font-family:'Syne',sans-serif;font-size:clamp(24px,4vw,40px);font-weight:700;color:#fff;margin-bottom:24px;line-height:1.2}
+.conclusion-hero p{font-size:16px;color:rgba(255,255,255,0.55);line-height:1.7;max-width:700px;margin-bottom:48px}
+.recs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.rec-item{
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:var(--r-sm);
+  padding:20px;
+}
+.rec-item .r-icon{font-size:20px;margin-bottom:10px;display:block}
+.rec-item .r-text{font-size:13px;color:rgba(255,255,255,0.65);line-height:1.5}
+
+/* ─── FOOTER ─── */
+.footer{background:var(--ink);border-top:1px solid rgba(255,255,255,0.06);padding:24px 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.footer-brand{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;color:#fff}
+.footer-info{font-size:12px;color:rgba(255,255,255,0.3)}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:700px){
+  .problem-grid,.data-layout,.metrics-layout,.feat-cards,.clases-row,.kpi-grid-4{grid-template-columns:1fr}
+  .kpi-item{border-right:none;border-bottom:1px solid var(--border)}
+  .kpi-item:last-child{border-bottom:none}
+  .arch-layers{flex-direction:column;gap:8px}
+  .arch-layer::after{content:'↓';right:50%;top:auto;bottom:-18px;transform:none}
+  .deploy-flow{flex-direction:column}
+  .deploy-step::after{content:'↓';right:50%;top:auto;bottom:-18px}
+  .actions-grid{grid-template-columns:1fr}
+  .threshold-box{flex-direction:column;gap:16px;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════ HERO ════════════════ -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-badge">Universidad Continental · CRISP-ML 2026</div>
+  <h1>Sistema de <span>Alerta</span><br>Temprana</h1>
+  <p class="hero-sub">Predicción de deserción estudiantil mediante Inteligencia Artificial — Proyecto SAT MLP</p>
+  <div class="hero-stats">
+    <div class="hero-stat"><span class="num">37K</span><span class="lbl">Alumnos analizados</span></div>
+    <div class="hero-stat"><span class="num">9.67%</span><span class="lbl">En riesgo real</span></div>
+    <div class="hero-stat"><span class="num">>98%</span><span class="lbl">Sensibilidad lograda</span></div>
+    <div class="hero-stat"><span class="num">>95%</span><span class="lbl">Precisión</span></div>
+    <div class="hero-stat"><span class="num">0.70</span><span class="lbl">Umbral de alerta</span></div>
+  </div>
+  <div class="hero-scroll">
+    <div class="scroll-line"></div>
+    <span>Explorar</span>
+  </div>
+</section>
+
+<!-- ════════════════ RESUMEN EJECUTIVO ════════════════ -->
+<section class="exec-summary">
+  <div class="exec-inner">
+    <div class="exec-label">Resumen ejecutivo</div>
+    <h2>¿Qué hace este sistema y por qué importa?</h2>
+    <div class="exec-cards">
+      <div class="exec-card">
+        <span class="icon">🎯</span>
+        <div class="title">El problema</div>
+        <div class="desc">El 15% de los alumnos abandona en el primer ciclo. Sin herramientas, es imposible saber quién está en riesgo antes de que sea tarde.</div>
+      </div>
+      <div class="exec-card">
+        <span class="icon">🤖</span>
+        <div class="title">La solución</div>
+        <div class="desc">Un modelo de IA (red neuronal MLP) que analiza datos de cada alumno y predice con alta precisión si va a desertar.</div>
+      </div>
+      <div class="exec-card">
+        <span class="icon">🔔</span>
+        <div class="title">La acción</div>
+        <div class="desc">Cuando se detecta riesgo, el sistema alerta automáticamente al tutor para que intervenga a tiempo.</div>
+      </div>
+      <div class="exec-card">
+        <span class="icon">📈</span>
+        <div class="title">El resultado</div>
+        <div class="desc">Más del 98% de los alumnos en riesgo son identificados correctamente, permitiendo salvar trayectorias académicas.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ════════════════ 01 PROBLEMA ════════════════ -->
+<section>
+  <div class="section-wrap">
+    <div class="section-label"><span class="num">01</span>Comprensión del negocio</div>
+    <h2 class="section-title">¿Cuál es el problema que queremos resolver?</h2>
+    <p class="section-intro">La deserción estudiantil tiene un costo humano y económico enorme. La clave está en detectarla antes de que ocurra.</p>
+
+    <div class="problem-grid">
+      <div class="problem-big">
+        <div>
+          <div class="big-num">15%</div>
+          <div class="big-label">de estudiantes abandona en el primer ciclo académico</div>
+        </div>
+        <p style="font-size:14px;color:var(--muted);margin-top:24px">Esto equivale a cientos de trayectorias interrumpidas cada año — muchas de ellas prevenibles con intervención oportuna.</p>
+      </div>
+      <div class="problem-desc">
+        <div>
+          <h3>¿Cómo lo resuelve la IA?</h3>
+          <p>El modelo aprende patrones de miles de alumnos anteriores y clasifica a cada nuevo estudiante en una de dos categorías:</p>
+        </div>
+        <div class="clases-row" style="margin-top:20px;margin-bottom:0">
+          <div class="clase-card riesgo">
+            <div class="clase-tag">⚠ Clase 1</div>
+            <p style="color:rgba(255,255,255,0.7);font-size:13px">Alta probabilidad de abandonar</p>
+          </div>
+          <div class="clase-card seguro" style="background:rgba(26,122,74,0.15);border-color:rgba(26,122,74,0.3)">
+            <div class="clase-tag" style="color:#5ecfa0">✓ Clase 0</div>
+            <p style="color:rgba(255,255,255,0.7);font-size:13px">Continuará sus estudios</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ════════════════ KPIs ════════════════ -->
+<section class="kpi-section">
+  <div class="section-wrap" style="padding-bottom:0">
+    <div class="section-label"><span class="num">01</span>Métricas que guían el modelo</div>
+    <h2 class="section-title">¿Cómo medimos el éxito?</h2>
+    <p class="section-intro">No todas las métricas valen igual. En este proyecto, lo más importante es no dejar a ningún alumno en riesgo sin detectar.</p>
+  </div>
+  <div class="kpi-grid-4">
+    <div class="kpi-item">
+      <span class="kpi-icon">🎯</span>
+      <div class="kpi-name">Sensibilidad (Recall)</div>
+      <div class="kpi-val" style="color:var(--green)">>98%</div>
+      <div class="kpi-desc">Detecta a casi todos los alumnos en riesgo real. Ninguno pasa desapercibido.</div>
+      <span class="kpi-badge badge-max">Prioridad máxima</span>
+    </div>
+    <div class="kpi-item">
+      <span class="kpi-icon">⚡</span>
+      <div class="kpi-name">Precisión</div>
+      <div class="kpi-val" style="color:var(--accent)">>95%</div>
+      <div class="kpi-desc">Las alertas generadas son confiables. Pocos recursos desperdiciados en falsos avisos.</div>
+      <span class="kpi-badge badge-sec">Alta prioridad</span>
+    </div>
+    <div class="kpi-item">
+      <span class="kpi-icon">🚨</span>
+      <div class="kpi-name">Falso Negativo</div>
+      <div class="kpi-val" style="color:var(--accent2)">Crítico</div>
+      <div class="kpi-desc">El modelo dice "está bien" pero el alumno abandona. El peor error posible.</div>
+      <span class="kpi-badge badge-crit">Error fatal</span>
+    </div>
+    <div class="kpi-item">
+      <span class="kpi-icon">📊</span>
+      <div class="kpi-name">Accuracy</div>
+      <div class="kpi-val" style="color:var(--hint)">Engañosa</div>
+      <div class="kpi-desc">Con clases desbalanceadas (90/10), el accuracy puede ser alto aunque el modelo falle en lo importante.</div>
+      <span class="kpi-badge badge-low">Baja prioridad</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ════════════════ 02 DATOS ════════════════ -->
+<section>
+  <div class="section-wrap">
+    <div class="section-label"><span class="num">02</span>Comprensión de los datos</div>
+    <h2 class="section-title">¿Con qué información trabajamos?</h2>
+    <p class="section-intro">Analizamos 37,000 registros de estudiantes para entender qué factores se relacionan con la deserción.</p>
+
+    <div class="data-layout">
+      <div class="data-chart-card">
+        <div class="chart-title">Distribución de clases</div>
+        <div class="chart-sub">El dataset está fuertemente desbalanceado — solo el 9.67% son casos de riesgo</div>
+        <div class="legend-row">
+          <span class="leg"><span class="leg-dot" style="background:#A32D2D"></span>En riesgo — 3,578 alumnos</span>
+          <span class="leg"><span class="leg-dot" style="background:#3B6D11"></span>Sin riesgo — 33,422 alumnos</span>
+        </div>
+        <div style="position:relative;height:220px">
+          <canvas id="distChart" role="img" aria-label="Donut: 9.67% en riesgo, 90.33% sin riesgo">En riesgo: 3578. Sin riesgo: 33422.</canvas>
+        </div>
+      </div>
+
+      <div>
+        <div class="data-chart-card" style="margin-bottom:16px">
+          <div class="chart-title">¿Por qué este desbalance es un problema?</div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-top:8px">Si el modelo simplemente dijera "todos están bien", acertaría el 90% del tiempo — pero fallaría en exactamente los casos que más importan. Por eso usamos técnicas especiales de balanceo.</p>
+        </div>
+        <div class="data-chart-card">
+          <div class="chart-title">Hallazgo clave: correlación cercana a 0</div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-top:8px">Variables como el GPA individualmente no predicen la deserción. Las relaciones son <strong>no lineales</strong> — por eso una red neuronal MLP supera a modelos simples como la regresión logística.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="outlier-full">
+      <div class="chart-title">Valores atípicos detectados por variable (Método IQR)</div>
+      <div class="chart-sub">Identificamos registros fuera del rango normal para limpiar el conjunto de datos</div>
+      <div style="position:relative;height:230px;margin-top:8px">
+        <canvas id="outlierChart" role="img" aria-label="Valores atípicos por variable">Acceso a internet: 467, Fracasos previos: 165, Créditos: 130, Asistencia: 124, Promedio: 121, Traslado: 104.</canvas>
+      </div>
+      <p class="outlier-note">El acceso a internet presenta la mayor variabilidad — reflejo directo de diferencias socioeconómicas en la población estudiantil.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ════════════════ 03 PREPARACIÓN ════════════════ -->
+<section style="background:var(--surface)">
+  <div class="section-wrap">
+    <div class="section-label"><span class="num">03</span>Preparación de los datos</div>
+    <h2 class="section-title">Alistando la información para la IA</h2>
+    <p class="section-intro">Los datos crudos raramente están listos para entrenar un modelo. Esta fase es crítica para la calidad del resultado final.</p>
+
+    <div class="prep-steps">
+      <div class="prep-step">
+        <span class="step-num">PASO 01</span>
+        <span class="step-icon">✅</span>
+        <div class="step-title">Verificación de calidad</div>
+        <div class="step-desc">Los 37,000 registros estaban completos al 100%. Sin valores faltantes — no fue necesario imputar datos artificiales.</div>
+      </div>
+      <div class="prep-step">
+        <span class="step-num">PASO 02</span>
+        <span class="step-icon">📏</span>
+        <div class="step-title">Estandarización</div>
+        <div class="step-desc">Normalizamos todas las variables para que "hablen el mismo idioma". Sin esto, el promedio y los minutos de traslado tendrían pesos distorsionados.</div>
+      </div>
+      <div class="prep-step">
+        <span class="step-num">PASO 03</span>
+        <span class="step-icon">⚖️</span>
+        <div class="step-title">Balanceo de clases</div>
+        <div class="step-desc">Le dimos 10× más importancia a los casos de riesgo durante el entrenamiento para compensar el desbalance 90/10.</div>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:18px;font-weight:600;margin-bottom:16px">Nuevas variables creadas por el equipo</h3>
+    <div class="feat-cards">
+      <div class="feat-card blue">
+        <span class="f-icon">📐</span>
+        <div class="f-title">Eficiencia Académica</div>
+        <div class="f-desc">GPA dividido entre créditos completados. Mide si el alumno rinde bien en relación con la carga que lleva — no solo si tiene buenas notas.</div>
+      </div>
+      <div class="feat-card purple">
+        <span class="f-icon">🛡️</span>
+        <div class="f-title">Puntuación de Soporte</div>
+        <div class="f-desc">Combina apoyo familiar, motivación, nivel socioeconómico y acceso a internet en un solo número que resume el respaldo total del estudiante.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ════════════════ 04 MODELO ════════════════ -->
+<section>
+  <div class="section-wrap">
+    <div class="section-label"><span class="num">04</span>Modelado — Red Neuronal MLP</div>
+    <h2 class="section-title">El cerebro del sistema</h2>
+    <p class="section-intro">Un Perceptrón Multicapa (MLP) es una red neuronal artificial inspirada en cómo funciona el cerebro humano — aprende de ejemplos pasados para predecir el futuro.</p>
+
+    <div class="arch-visual">
+      <div class="arch-layers">
+        <div class="arch-layer">
+          <div class="layer-box">
+            <div class="dots"><div class="dot on"></div><div class="dot on"></div><div class="dot on"></div><div class="dot on"></div><div class="dot"></div></div>
+            <div class="layer-name">Entrada</div>
+            <div class="layer-detail">Datos del alumno</div>
+          </div>
+        </div>
+        <div class="arch-layer">
+          <div class="layer-box highlight-layer">
+            <div class="dots"><div class="dot on"></div><div class="dot on"></div><div class="dot on"></div><div class="dot on"></div><div class="dot on"></div></div>
+            <div class="layer-name">Capa 1</div>
+            <div class="layer-detail">64 neuronas · ReLU</div>
+            <div class="layer-tag">Regulariz. 30%</div>
+          </div>
+        </div>
+        <div class="arch-layer">
+          <div class="layer-box highlight-layer">
+            <div class="dots"><div class="dot on"></div><div class="dot on"></div><div class="dot on"></div><div class="dot"></div><div class="dot"></div></div>
+            <div class="layer-name">Capa 2</div>
+            <div class="layer-detail">32 neuronas · ReLU</div>
+            <div class="layer-tag">Regulariz. 20%</div>
+          </div>
+        </div>
+        <div class="arch-layer">
+          <div class="layer-box">
+            <div class="dots"><div class="dot on"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+            <div class="layer-name">Salida</div>
+            <div class="layer-detail">1 neurona · Sigmoid</div>
+            <div class="layer-tag">Probabilidad 0–1</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="config-grid">
+      <div class="config-item"><div class="config-label">Función de activación oculta</div><div class="config-val">ReLU</div></div>
+      <div class="config-item"><div class="config-label">Función de activación salida</div><div class="config-val">Sigmoide</div></div>
+      <div class="config-item"><div class="config-label">Optimizador</div><div class="config-val">Adam</div></div>
+      <div class="config-item"><div class="config-label">Función de pérdida</div><div class="config-val">Entropía cruzada binaria</div></div>
+      <div class="config-item"><div class="config-label">Regularización capa 1</div><div class="config-val">Abandono aleatorio (0.3)</div></div>
+      <div class="config-item"><div class="config-label">Regularización capa 2</div><div class="config-val">Abandono aleatorio (0.2)</div></div>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dot" style="background:#ff5f57"></div>
+        <div class="code-dot" style="background:#febc2e"></div>
+        <div class="code-dot" style="background:#28c840"></div>
+        <span class="code-lang">Python · Keras</span>
+      </div>
+      <div class="code-body">
+<span class="c-cm"># Arquitectura del modelo MLP</span>
+modelo = <span class="c-fn">Sequential</span>()
+modelo.<span class="c-fn">add</span>(<span class="c-fn">Dense</span>(<span class="c-num">64</span>, activation=<span class="c-str">'relu'</span>, input_shape=(X_train_scaled.shape[<span class="c-num">1</span>],)))
+modelo.<span class="c-fn">add</span>(<span class="c-fn">Dropout</span>(<span class="c-num">0.3</span>))   <span class="c-cm"># Previene sobreajuste en capa 1</span>
+modelo.<span class="c-fn">add</span>(<span class="c-fn">Dense</span>(<span class="c-num">32</span>, activation=<span class="c-str">'relu'</span>))
+modelo.<span class="c-fn">add</span>(<span class="c-fn">Dropout</span>(<span class="c-num">0.2</span>))   <span class="c-cm"># Previene sobreajuste en capa 2</span>
+modelo.<span class="c-fn">add</span>(<span class="c-fn">Dense</span>(<span class="c-num">1</span>, activation=<span class="c-str">'sigmoid'</span>))  <span class="c-cm"># Salida: probabilidad de riesgo</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ════════════════ 05 EVALUACIÓN ════════════════ -->
+<section class="eval-section">
+  <div class="section-wrap">
+    <div class="section-label"><span class="num">05</span>Evaluación del modelo</div>
+    <h2 class="section-title">¿Qué tan bien funciona?</h2>
+    <p class="section-intro">Los resultados superan los umbrales mínimos definidos. Pero más importante: el modelo falla muy pocas veces donde más importa.</p>
+
+    <div class="metrics-layout">
+      <div>
+        <div class="data-chart-card" style="margin-bottom:20px">
+          <div class="chart-title">Sensibilidad vs. Precisión — resultado del modelo</div>
+          <div class="chart-sub">Comparación entre lo logrado y el mínimo requerido</div>
+          <div class="legend-row">
+            <span class="leg"><span class="leg-dot" style="background:#0F6E56"></span>Sensibilidad</span>
+            <span class="leg"><span class="leg-dot" style="background:#185FA5"></span>Precisión</span>
+            <span class="leg"><span class="leg-dot" style="background:#ccc;border:1px dashed #888"></span>Mínimo requerido</span>
+          </div>
+          <div style="position:relative;height:220px">
+            <canvas id="metricsChart" role="img" aria-label="Sensibilidad 98.5% lograda vs 98% mínimo, Precisión 95.8% lograda vs 95% mínimo">Sensibilidad: 98.5% lograda, 98% mínimo. Precisión: 95.8% lograda, 95% mínimo.</canvas>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="confusion-box">
+          <div class="conf-title">Matriz de confusión (simplificada)</div>
+          <div class="conf-grid">
+            <div class="conf-cell conf-vp">
+              <span class="val">✓</span>
+              <div class="lbl">Verdadero Positivo</div>
+              <div class="sub">En riesgo y lo detectamos</div>
+            </div>
+            <div class="conf-cell conf-fn">
+              <span class="val">✗</span>
+              <div class="lbl">Falso Negativo</div>
+              <div class="sub">En riesgo y NO lo detectamos</div>
+            </div>
+            <div class="conf-cell conf-fp">
+              <span class="val">!</span>
+              <div class="lbl">Falso Positivo</div>
+              <div class="sub">Alerta innecesaria (asumible)</div>
+            </div>
+            <div class="conf-cell conf-vn">
+              <span class="val">✓</span>
+              <div class="lbl">Verdadero Negativo</div>
+              <div class="sub">Sin riesgo y correcto</div>
+            </div>
+          </div>
+          <div class="crit-alert">
+            <span class="icon">🚨</span>
+            <div>
+              <div class="title">El error que no podemos permitir</div>
+              <div class="desc">Un Falso Negativo significa que el alumno abandona sin que nadie intervenga. El modelo fue diseñado para minimizar este caso a toda costa.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ════════════════ 06 DESPLIEGUE ════════════════ -->
+<section>
+  <div class="section-wrap">
+    <div class="section-label"><span class="num">06</span>Despliegue y monitoreo</div>
+    <h2 class="section-title">¿Cómo funciona en la práctica?</h2>
+    <p class="section-intro">El modelo no es solo un experimento académico — está diseñado para integrarse en los procesos reales de la universidad.</p>
+
+    <div class="threshold-box">
+      <div class="threshold-num">0.70</div>
+      <div class="threshold-text">
+        <div class="t">Umbral de alerta automática</div>
+        <div class="d">Si el modelo predice una probabilidad de deserción mayor a 0.70 (70%), se activa inmediatamente el protocolo de intervención. Este umbral equilibra sensibilidad con uso eficiente de recursos.</div>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:18px;font-weight:600;margin-bottom:16px">¿Qué pasa cuando se activa una alerta?</h3>
+    <div class="actions-grid">
+      <div class="action-card a1">
+        <span class="a-icon">📩</span>
+        <div class="a-title">Notificación al tutor</div>
+        <div class="a-desc">El tutor asignado recibe una alerta inmediata con el perfil de riesgo del alumno.</div>
+      </div>
+      <div class="action-card a2">
+        <span class="a-icon">📋</span>
+        <div class="a-title">Seguimiento académico</div>
+        <div class="a-desc">El alumno es incluido en el programa de monitoreo y seguimiento personalizado.</div>
+      </div>
+      <div class="action-card a3">
+        <span class="a-icon">🤝</span>
+        <div class="a-title">Soporte activado</div>
+        <div class="a-desc">Se activa apoyo psicopedagógico y/o económico según el perfil de necesidades detectado.</div>
+      </div>
+    </div>
+
+    <div class="data-chart-card">
+      <div class="chart-title">Monitoreo continuo — Deriva de datos</div>
+      <p style="font-size:14px;color:var(--muted);line-height:1.6;margin-top:8px;margin-bottom:16px">El comportamiento estudiantil cambia con el tiempo. Si el modelo no se actualiza, pierde precisión. Por eso se monitorea continuamente si los patrones de datos han cambiado respecto al entrenamiento original.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        <span style="background:var(--accent-soft);color:var(--accent);border:1px solid rgba(26,79,214,0.15);padding:6px 14px;border-radius:100px;font-size:13px;font-weight:500">Reentrenar cada ciclo académico</span>
+        <span style="background:var(--green-soft);color:var(--green);border:1px solid rgba(26,122,74,0.15);padding:6px 14px;border-radius:100px;font-size:13px;font-weight:500">Evaluar métricas periódicamente</span>
+        <span style="background:var(--amber-soft);color:var(--amber);border:1px solid rgba(196,122,10,0.15);padding:6px 14px;border-radius:100px;font-size:13px;font-weight:500">Detectar cambios en distribución</span>
+        <span style="background:var(--purple-soft);color:var(--purple);border:1px solid rgba(107,26,214,0.15);padding:6px 14px;border-radius:100px;font-size:13px;font-weight:500">Incorporar nuevas variables</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ CONCLUSIONES ════════════════ -->
+<section class="conclusion-hero">
+  <div class="conclusion-inner">
+    <div class="section-label">Conclusiones</div>
+    <h2>¿Qué aprendimos y qué recomendamos?</h2>
+    <p>El Perceptrón Multicapa demostró que la inteligencia artificial es una herramienta viable, potente y responsable para el ámbito educativo. La clave del éxito no estuvo solo en el algoritmo, sino en la correcta preparación de los datos y en elegir las métricas correctas para el problema correcto.</p>
+    <div class="recs-grid">
+      <div class="rec-item">
+        <span class="r-icon">🏛️</span>
+        <div class="r-text">Integrar el modelo directamente con el área de Bienestar Universitario como herramienta de soporte en la toma de decisiones.</div>
+      </div>
+      <div class="rec-item">
+        <span class="r-icon">🔄</span>
+        <div class="r-text">Reentrenar el modelo al inicio de cada ciclo académico con los datos más recientes para mantener su precisión.</div>
+      </div>
+      <div class="rec-item">
+        <span class="r-icon">📡</span>
+        <div class="r-text">Establecer un sistema de monitoreo continuo para detectar la deriva de datos y la degradación del modelo en producción.</div>
+      </div>
+      <div class="rec-item">
+        <span class="r-icon">🔍</span>
+        <div class="r-text">Incorporar nuevas variables — como asistencia a eventos, uso de biblioteca o interacción con plataformas digitales — para mejorar futuras versiones.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer-brand">Universidad Continental · Proyecto SAT MLP</div>
+  <div class="footer-info">CRISP-ML · 2026 · Todos los derechos reservados</div>
+</footer>
+
+<script>
+const gridColor = 'rgba(0,0,0,0.05)';
+const textColor = 'rgba(0,0,0,0.4)';
+
+// Gráfico 1 — Donut distribución
+new Chart(document.getElementById('distChart'),{
+  type:'doughnut',
+  data:{
+    labels:['Sin riesgo (90.33%)','En riesgo (9.67%)'],
+    datasets:[{data:[33422,3578],backgroundColor:['#3B6D11','#A32D2D'],borderWidth:0,hoverOffset:6}]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,cutout:'70%',
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{label:c=>c.label+': '+c.raw.toLocaleString()+' alumnos'}}
+    }
+  }
+});
+
+// Gráfico 2 — Outliers horizontal
+new Chart(document.getElementById('outlierChart'),{
+  type:'bar',
+  data:{
+    labels:['Acceso a internet','Fracasos previos','Créditos completados','Tasa de asistencia','Promedio (GPA)','Tiempo de traslado'],
+    datasets:[{label:'Valores atípicos',data:[467,165,130,124,121,104],backgroundColor:['#1a4fd6','#534AB7','#185FA5','#0F6E56','#3B6D11','#854F0B'],borderRadius:6,borderSkipped:false}]
+  },
+  options:{
+    indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' valores atípicos'}}},
+    scales:{
+      x:{grid:{color:gridColor},ticks:{color:textColor},border:{display:false}},
+      y:{grid:{display:false},ticks:{color:'rgba(0,0,0,0.55)',font:{size:12}},border:{display:false}}
+    }
+  }
+});
+
+// Gráfico 3 — Métricas comparativas
+new Chart(document.getElementById('metricsChart'),{
+  type:'bar',
+  data:{
+    labels:['Sensibilidad','Precisión'],
+    datasets:[
+      {label:'Logrado',data:[98.5,95.8],backgroundColor:['#0F6E56','#185FA5'],borderRadius:8,borderSkipped:false,barPercentage:0.4},
+      {label:'Mínimo requerido',data:[98,95],backgroundColor:['rgba(15,110,86,0.1)','rgba(24,95,165,0.1)'],borderColor:['#0F6E56','#185FA5'],borderWidth:1.5,borderRadius:8,borderSkipped:false,barPercentage:0.4}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw.toFixed(1)+'%'}}},
+    scales:{
+      y:{min:90,max:100,grid:{color:gridColor},ticks:{color:textColor,callback:v=>v+'%'},border:{display:false}},
+      x:{grid:{display:false},ticks:{color:textColor},border:{display:false}}
+    }
+  }
+});
+</script>
+</body>
+</html>
